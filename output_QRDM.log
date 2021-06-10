@@ -4,15 +4,18 @@ Warning: Can't read registry to find the necessary compiler setting
 Make sure that Python modules winreg, win32api or win32con are installed.
 C compiler: x86_64-linux-gnu-gcc -pthread -Wno-unused-result -Wsign-compare -DNDEBUG -g -fwrapv -O2 -Wall -g -fstack-protector-strong -Wformat -Werror=format-security -g -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -fPIC
 
+creating build
+creating build/temp.linux-x86_64-3.7
+creating build/temp.linux-x86_64-3.7/src
 compile options: '-I./include -I/home/mdessole/.local/lib/python3.7/site-packages/numpy/core/include -I['/home/mdessole/.local/lib/python3.7/site-packages/numpy/core/include'] -I./include -I/home/mdessole/.local/lib/python3.7/site-packages/numpy/core/include -I['/home/mdessole/.local/lib/python3.7/site-packages/numpy/core/include'] -I/usr/include/python3.7m -c'
-x86_64-linux-gnu-gcc: ./src/dlarfb.c
-x86_64-linux-gnu-gcc: ./src/dlarf.c
 x86_64-linux-gnu-gcc: QRDM_wrapper.c
-x86_64-linux-gnu-gcc: ./src/dgeqrdm_work.c
-x86_64-linux-gnu-gcc: ./src/dgeqp3.c
-x86_64-linux-gnu-gcc: ./src/dgeqr2.c
+x86_64-linux-gnu-gcc: ./src/dlarfb.c
 x86_64-linux-gnu-gcc: ./src/dlarfg.c
+x86_64-linux-gnu-gcc: ./src/dgeqr2.c
+x86_64-linux-gnu-gcc: ./src/dgeqp3.c
 x86_64-linux-gnu-gcc: ./src/dgeqrdm.c
+x86_64-linux-gnu-gcc: ./src/dlarf.c
+x86_64-linux-gnu-gcc: ./src/dgeqrdm_work.c
 In file included from /home/mdessole/.local/lib/python3.7/site-packages/numpy/core/include/numpy/ndarraytypes.h:1944:0,
                  from /home/mdessole/.local/lib/python3.7/site-packages/numpy/core/include/numpy/ndarrayobject.h:12,
                  from /home/mdessole/.local/lib/python3.7/site-packages/numpy/core/include/numpy/arrayobject.h:4,
@@ -61,10 +64,21 @@ In file included from /home/mdessole/.local/lib/python3.7/site-packages/numpy/co
         printf("8\n");
         ^
 ./src/dlarfb.c:122:8: note: include ‘<stdio.h>’ or provide a declaration of ‘printf’
-./src/dgeqrdm.c: In function ‘dgeqrdm’:
-./src/dgeqrdm.c:54:11: warning: implicit declaration of function ‘dgeqrdm_work’ [-Wimplicit-function-declaration]
-    info = dgeqrdm_work( matrix_layout, m, n, a, lda, jpvt, tau, ncols, thres, DM_procedure );
-           ^
+QRDM_wrapper.c: In function ‘QP3’:
+QRDM_wrapper.c:31:8: warning: assignment from incompatible pointer type [-Wincompatible-pointer-types]
+   jpvt = pyvector_to_Carrayptrs(jpvt_arr);
+        ^
+./src/dgeqrdm_work.c: In function ‘mark_argmin’:
+./src/dgeqrdm_work.c:29:23: warning: comparison between pointer and integer
+   while(vec[j]==1 && j<n){
+                       ^
+QRDM_wrapper.c: In function ‘QRDM’:
+QRDM_wrapper.c:64:8: warning: assignment from incompatible pointer type [-Wincompatible-pointer-types]
+   jpvt = pyvector_to_Carrayptrs(jpvt_arr);
+        ^
+QRDM_wrapper.c:66:6: warning: assignment from incompatible pointer type [-Wincompatible-pointer-types]
+   nc = pyvector_to_Carrayptrs(nc_arr);
+      ^
 ./src/dgeqr2.c: In function ‘dgeqr2_mia’:
 ./src/dgeqr2.c:140:2: warning: implicit declaration of function ‘xerbla_’ [-Wimplicit-function-declaration]
   xerbla_("DGEQR2", &i__1);
@@ -72,81 +86,55 @@ In file included from /home/mdessole/.local/lib/python3.7/site-packages/numpy/co
 ./src/dgeqr2.c:162:9: warning: implicit declaration of function ‘dlarfg_mia’ [-Wimplicit-function-declaration]
   flag = dlarfg_mia(&i__2, &a[i__ + i__ * a_dim1], &a[min(i__3, *m)+ i__ * a_dim1],
          ^
-./src/dgeqr2.c:183:4: warning: implicit declaration of function ‘dlarf_’ [-Wimplicit-function-declaration]
-    dlarf_(1, &i__2, &i__3, &a[i__ + i__ * a_dim1], &c__1,
-    ^
-./src/dgeqrdm_work.c: In function ‘mark_argmin’:
-./src/dgeqrdm_work.c:29:23: warning: comparison between pointer and integer
-   while(vec[j]==1 && j<n){
-                       ^
 ./src/dgeqrdm_work.c: In function ‘norm_update’:
 ./src/dgeqrdm_work.c:61:15: warning: unused variable ‘flag’ [-Wunused-variable]
    int ii, jj, flag = 0;
                ^
+./src/dgeqr2.c:183:4: warning: implicit declaration of function ‘dlarf_’ [-Wimplicit-function-declaration]
+    dlarf_(1, &i__2, &i__3, &a[i__ + i__ * a_dim1], &c__1,
+    ^
 ./src/dgeqrdm_work.c: In function ‘apply_jpvt’:
-./src/dgeqrdm_work.c:211:26: warning: passing argument 2 of ‘mark_argmin’ makes pointer from integer without a cast [-Wint-conversion]
-     i = mark_argmin(mark,n); // individua le colonne non ancora permutate
+./src/dgeqrdm_work.c:186:26: warning: passing argument 2 of ‘mark_argmin’ makes pointer from integer without a cast [-Wint-conversion]
+     i = mark_argmin(mark,n); /* Find column i to be moved */
                           ^
 ./src/dgeqrdm_work.c:27:5: note: expected ‘int *’ but argument is of type ‘int’
  int mark_argmin(int * vec, int *n){
      ^
-./src/dgeqrdm_work.c: In function ‘DM’:
-./src/dgeqrdm_work.c:297:20: warning: unused variable ‘ni’ [-Wunused-variable]
-   int idxj,i,j,nc, ni;
-                    ^
 ./src/dgeqrdm_work.c: In function ‘DM_perm’:
-./src/dgeqrdm_work.c:594:10: warning: unused variable ‘dummy’ [-Wunused-variable]
+./src/dgeqrdm_work.c:363:10: warning: unused variable ‘dummy’ [-Wunused-variable]
    double dummy = 0.0;
           ^
-./src/dgeqrdm_work.c:587:20: warning: unused variable ‘ni’ [-Wunused-variable]
+./src/dgeqrdm_work.c:358:20: warning: unused variable ‘ni’ [-Wunused-variable]
    int idxj,i,j,nc, ni, startpos1, startpos2;
                     ^
-./src/dgeqrdm_work.c: In function ‘DM_rect’:
-./src/dgeqrdm_work.c:754:22: warning: unused variable ‘ni’ [-Wunused-variable]
-   int idxj,i,j,l,nc, ni;
-                      ^
-./src/dgeqrdm_work.c: In function ‘DM_block’:
-./src/dgeqrdm_work.c:925:26: warning: unused variable ‘ni’ [-Wunused-variable]
-   int idxj,i,j,l,k,nc,ib,ni;
-                          ^
-./src/dgeqrdm_work.c: In function ‘DM_block_perm’:
-./src/dgeqrdm_work.c:1091:26: warning: unused variable ‘ni’ [-Wunused-variable]
-   int idxj,i,j,l,k,nc,ib,ni;
-                          ^
 ./src/dgeqrdm_work.c: In function ‘dgeqrdm_work’:
-./src/dgeqrdm_work.c:1376:5: warning: implicit declaration of function ‘xerbla_’ [-Wimplicit-function-declaration]
-     xerbla_("DGEDMQR", &i__1);
+./src/dgeqrdm_work.c:617:5: warning: implicit declaration of function ‘xerbla_’ [-Wimplicit-function-declaration]
+     xerbla_("DGEQRDM", &i__1);
      ^
-./src/dgeqrdm_work.c:1665:9: warning: implicit declaration of function ‘dgeqr2_mia’ [-Wimplicit-function-declaration]
-  info = dgeqr2_mia(&i__1, &fjb,  
+./src/dgeqrdm_work.c:755:14: warning: implicit declaration of function ‘dgeqr2_mia’ [-Wimplicit-function-declaration]
+       info = dgeqr2_mia(&i__1, &fjb,  
+              ^
+./src/dgeqrdm_work.c:781:15: warning: implicit declaration of function ‘LAPACKE_dlarfb_mia’ [-Wimplicit-function-declaration]
+       info =  LAPACKE_dlarfb_mia(matrix_layout,
+               ^
+./src/dgeqrdm_work.c:694:9: warning: unused variable ‘nc_x_block’ [-Wunused-variable]
+     int nc_x_block; 
          ^
-./src/dgeqrdm_work.c:1714:10: warning: implicit declaration of function ‘LAPACKE_dlarfb_mia’ [-Wimplicit-function-declaration]
-  info =  LAPACKE_dlarfb_mia(matrix_layout,
-          ^
-./src/dgeqrdm_work.c:1244:7: warning: variable ‘topbmn’ set but not used [-Wunused-but-set-variable]
-   int topbmn, sminmn;
+./src/dgeqrdm_work.c:576:7: warning: variable ‘sminmn’ set but not used [-Wunused-but-set-variable]
+   int sminmn;
        ^
-./src/dgeqrdm_work.c:1243:7: warning: unused variable ‘minws’ [-Wunused-variable]
-   int minws;
-       ^
-./src/dgeqrdm_work.c:1242:7: warning: variable ‘nbmin’ set but not used [-Wunused-but-set-variable]
-   int nbmin, minmn;
-       ^
-./src/dgeqrdm_work.c:1241:26: warning: variable ‘sn’ set but not used [-Wunused-but-set-variable]
-   int j, jb, na, nb, sm, sn, nx, fjb, fjb_cmp, nfxd, ldt;
+./src/dgeqrdm_work.c:574:26: warning: unused variable ‘nx’ [-Wunused-variable]
+   int j, jb, na, sm, sn, nx, fjb, fjb_cmp, nfxd, ldt;
                           ^
-./src/dgeqrdm_work.c:1241:10: warning: unused variable ‘jb’ [-Wunused-variable]
-   int j, jb, na, nb, sm, sn, nx, fjb, fjb_cmp, nfxd, ldt;
+./src/dgeqrdm_work.c:574:22: warning: variable ‘sn’ set but not used [-Wunused-but-set-variable]
+   int j, jb, na, sm, sn, nx, fjb, fjb_cmp, nfxd, ldt;
+                      ^
+./src/dgeqrdm_work.c:574:10: warning: unused variable ‘jb’ [-Wunused-variable]
+   int j, jb, na, sm, sn, nx, fjb, fjb_cmp, nfxd, ldt;
           ^
-./src/dgeqrdm_work.c:1236:19: warning: unused variable ‘jj’ [-Wunused-variable]
-   int tmpint, ii, jj;
-                   ^
-./src/dgeqrdm_work.c:1236:7: warning: unused variable ‘tmpint’ [-Wunused-variable]
-   int tmpint, ii, jj;
-       ^
-./src/dgeqrdm_work.c:1218:20: warning: unused variable ‘flag_exit2’ [-Wunused-variable]
-   int flag_exit1=0,flag_exit2=0;
-                    ^
+./src/dgeqrdm_work.c:571:11: warning: unused variable ‘jj’ [-Wunused-variable]
+   int ii, jj;
+           ^
 ./src/dgeqrdm_work.c: At top level:
 ./src/dgeqrdm_work.c:10:12: warning: ‘c_n1’ defined but not used [-Wunused-variable]
  static int c_n1 = -1;
@@ -157,16 +145,10 @@ In file included from /home/mdessole/.local/lib/python3.7/site-packages/numpy/co
 ./src/dgeqrdm_work.c:12:12: warning: ‘c__2’ defined but not used [-Wunused-variable]
  static int c__2 = 2;
             ^
-QRDM_wrapper.c: In function ‘QP3’:
-QRDM_wrapper.c:31:8: warning: assignment from incompatible pointer type [-Wincompatible-pointer-types]
-   jpvt = pyvector_to_Carrayptrs(jpvt_arr);
+./src/dgeqrdm.c: In function ‘dgeqrdm’:
+./src/dgeqrdm.c:13:8: warning: implicit declaration of function ‘dgeqrdm_work’ [-Wimplicit-function-declaration]
+ info = dgeqrdm_work( matrix_layout, m, n, a, lda, jpvt, tau, ncols, thres, nb );
         ^
-QRDM_wrapper.c: In function ‘QRDM’:
-QRDM_wrapper.c:64:8: warning: assignment from incompatible pointer type [-Wincompatible-pointer-types]
-   jpvt = pyvector_to_Carrayptrs(jpvt_arr);
-        ^
-QRDM_wrapper.c:66:6: warning: assignment from incompatible pointer type [-Wincompatible-pointer-types]
-   nc = pyvector_to_Carrayptrs(nc_arr);
-      ^
+creating build/lib.linux-x86_64-3.7
 x86_64-linux-gnu-gcc -pthread -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions -Wl,-z,relro -Wl,-Bsymbolic-functions -Wl,-z,relro -g -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 build/temp.linux-x86_64-3.7/QRDM_wrapper.o build/temp.linux-x86_64-3.7/src/dlarfb.o build/temp.linux-x86_64-3.7/src/dlarf.o build/temp.linux-x86_64-3.7/src/dlarfg.o build/temp.linux-x86_64-3.7/src/dgeqr2.o build/temp.linux-x86_64-3.7/src/dgeqp3.o build/temp.linux-x86_64-3.7/src/dgeqrdm_work.o build/temp.linux-x86_64-3.7/src/dgeqrdm.o -lblas -llapacke -o build/lib.linux-x86_64-3.7/QRDM.cpython-37m-x86_64-linux-gnu.so
 copying build/lib.linux-x86_64-3.7/QRDM.cpython-37m-x86_64-linux-gnu.so -> 
