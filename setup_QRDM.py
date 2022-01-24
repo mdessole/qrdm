@@ -10,7 +10,7 @@ from distutils.extension import Extension
 import numpy
 import numpy.distutils.misc_util
 
-static_libraries = ['blas','lapacke']
+static_libraries = ['blas','lapacke','lapack']
 static_lib_dir = '/usr/lib'
 libraries = ['z', 'xml2', 'gmp']
 #library_dirs = ['/system/lib', '/system/lib64']

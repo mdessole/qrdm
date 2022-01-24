@@ -1,4 +1,4 @@
-#include <python3.7m/Python.h>
+#include <python3.8/Python.h>
 #include <numpy/arrayobject.h>
 #include <time.h>
 #include <lapacke.h>
@@ -40,6 +40,32 @@ static PyObject* QP3(PyObject* self, PyObject* args)
   return Py_BuildValue("i", out);
 }
 
+
+static PyObject* QRF(PyObject* self, PyObject* args)
+{
+  PyArrayObject *A_arr,  *tau_arr;
+  double *A,  *tau;   // The C vectors to be created to point to the 
+                            //   python vectors, cin and cout point to the row
+                            //   of vecin and vecout, respectively
+  int *jpvt;
+  int matrix_layout,m,n,lda, out; 	
+
+  /* Parse tuples separately since args will differ between C fcns */
+  if (!PyArg_ParseTuple(args, "iiiOiO", &matrix_layout, &m, &n,
+			&A_arr, &lda,  &tau_arr))  return NULL;
+  if (NULL == A_arr)  return NULL;
+  if (NULL == tau_arr)  return NULL;
+  A = pyvector_to_Carrayptrs(A_arr);
+  tau = pyvector_to_Carrayptrs(tau_arr);
+  
+
+  //  clock_t start = clock();
+  out = LAPACKE_dgeqrf(matrix_layout, m, n, A, lda, tau);
+  //clock_t stop = clock();
+  //printf("C clock: Elapsed time  %.10f seconds\n", ((double)(stop-start))/CLOCKS_PER_SEC);
+  
+  return Py_BuildValue("i", out);
+}
 
 
 PyObject* QRDM(PyObject* self, PyObject* args)
@@ -104,11 +130,12 @@ static PyObject* DORMQR(PyObject* self, PyObject* args)
 // Public interface
 static PyMethodDef QRDMInterfaceMethods[] = {
  //{ "overwriteStateVariable",  overwriteStateVariable,  METH_VARARGS, "Overwrite a state variable"},
- { "init",  init,  METH_VARARGS, "initialize module"},
- { "QP3",  QP3,  METH_VARARGS, "LAPACK QR with column pivoting (from lapacke)"},
- { "QRDM",  QRDM,  METH_VARARGS, "QR with Deviation Maximization pivoting"},
- { "DORMQR", DORMQR, METH_VARARGS, "LAPACK dormqr" },
- { NULL, NULL, 0, NULL }
+    { "init",  init,  METH_VARARGS, "initialize module"},
+    { "QRF",  QRF,  METH_VARARGS, "LAPACK QR without column pivoting (from lapacke)"},
+    { "QP3",  QP3,  METH_VARARGS, "LAPACK QR with column pivoting (from lapacke)"},
+    { "QRDM",  QRDM,  METH_VARARGS, "QR with Deviation Maximization pivoting"},
+    { "DORMQR", DORMQR, METH_VARARGS, "LAPACK dormqr" },
+ { NULL, NULL, NULL, 0, NULL }
 };
 
 

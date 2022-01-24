@@ -19,6 +19,7 @@ static int c__2 = 2;
 
 #define DEBUGMODE
 
+
 typedef struct 
 { double val;
   int idx;
@@ -36,7 +37,7 @@ void norm_update(int m, int n, int fjb,
 		 double *a, int lda,
 		 double *work, double *workOLD, double *maxnrm,
 		 wrapStruct *tmpStr,
-		 int * workint,
+		 int * workint, int * ploc,
 		 double tol3z){
   /* This function safely updates the square of the column norms
      after having triangularized a block of fjb columns. Norm update
@@ -107,9 +108,10 @@ void norm_update(int m, int n, int fjb,
 	
       }
       if (1){ // initialize auxiliary arrays
-	tmpStr[jj].val = work[jj];
-	tmpStr[jj].idx = jj;	
-	workint[jj] = 0;
+        tmpStr[jj].val = work[jj];
+        tmpStr[jj].idx = jj;	
+        workint[jj] = 0;
+        ploc[jj] = jj;
       }
     }
   }
@@ -140,82 +142,9 @@ int cmpStruct (const void * a, const void * b)
 }
 
 
-
-void apply_jpvt(int onebased,
-		int m, int n,
-		double *a, int lda,
-		int *jpvt, int *jpvtdef,
-		double *norms, int *mark, double *tmpcol ){
-  /* this function permutes the columns of a accordingly to the order specified by the vector jpvt
-     onebased = 1 if indices in jvpt start from 1, 0 otherwise (indices start from 0)
-     m = the number of rows of a
-     n = the number of columns, and the length of jvt
-     a = matrix of size m*n
-     lda = leading dimension of a  = nb of rows
-     jpvt = output of DM = new ordering for the n columns of a 
-     jpvtdef = current pivoting for the matrix a (and previous columns, if any)
-     norms = vector of column norms
-     mark = integer workspace
-     tmpcol = double workspace = m doubles to perform the swap of two columns
-
-     **auxiliary memory**
-     n int (mark)
-     m double (tmpcol)
-  */
-
-  
-  int  marked = 0, i, j, tmp, tmp2;  
-  double tmpnorm; 
-
-  int ii;
-
-  if (onebased){
-    for (ii=0;ii<n;ii++){
-      jpvt[ii] -= 1;
-      mark[ii] = 0;
-    }
-  }
-  else{
-    for (ii=0;ii<n;ii++)
-      mark[ii] = 0; 
-  }
-  
-  int nscambi = 0;
-  marked = 0;
-  while (marked<n){
-    i = mark_argmin(mark,n); /* Find column i to be moved */
-    tmp = i;
-    tmp2 = jpvtdef[i];
-    tmpnorm = norms[i];
-    /*Copy i-th column into tmpcol*/
-    for (j=0;j<m;j++)
-      tmpcol[j] = a[i*lda+j];
-    while((jpvt[i]!=tmp) && (marked<n)){
-      if (i!=jpvt[i]){
-	/* Swap columns of indices i and jpvt[i] */
-	for (j=0;j<m;j++)
-	  a[i*lda+j] = a[jpvt[i]*lda+j];
-	jpvtdef[i] = jpvtdef[jpvt[i]];
-	norms[i]   = norms[jpvt[i]];
-	nscambi +=1;
-	i = jpvt[i];
-      }
-      mark[i]    = 1;
-      marked++;
-    }
-    /*Copy i-th column from tmpcol*/
-    for (j=0;j<m;j++)
-      a[i*lda+j] = tmpcol[j];
-    jpvtdef[i] = tmp2;
-    norms[i] = tmpnorm;
-    mark[i] = 1;
-    marked++;
-    nscambi +=1;
-  }
-
-  return;
+int cmpfunc (const void * a, const void * b) {
+   return ( *(int*)a - *(int*)b );
 }
-
 
 void permute_marked(int m, int n, int ncols,
 		    double *a, int lda,
@@ -228,7 +157,7 @@ void permute_marked(int m, int n, int ncols,
   int nscambi = 0;
   int i, j, jc, itmp, jclda;
   double dtmp;
-
+  int k;
 
   for (j=0;j<nz+nb_idxI;j++){
     jc = idxI[j];
@@ -246,73 +175,84 @@ void permute_marked(int m, int n, int ncols,
       jblda = jb*lda;
       jtlda = jt*lda;
       for (i=0;i<m;i++){
-	dtmp = a[jtlda];
-	a[jtlda] = a[jblda];
-	a[jblda] = dtmp;
-	jblda++;
-	jtlda++;
+        dtmp = a[jtlda];
+        a[jtlda] = a[jblda];
+        a[jblda] = dtmp;
+        jblda++;
+        jtlda++;
       }
       nscambi +=1;
       while((jb<ncols) && (marked[jb]!=0) && (marked[jb]!=2))
-	jb+=1;
+        jb+=1;
       while((jt>=0) && (marked[jt]!=0) && (marked[jt]!=1))
-	jt-=1;
+        jt-=1;
     }
     
 
     if (marked[jc]==1){
+        //printf("jc, jb = %d, %d\nmarked = ", jb,jc);
+        //  for(k=0;k<ncols;k++)
+        //      printf("%d \t",marked[k]);
+        //  printf("\n");
       while((jb<ncols) && (marked[jb]!=0) && (marked[jb]!=2))
-	jb+=1;
-      if ((jc<=jb) || (jc< nb_idxI))
-	continue;
+        jb+=1;
+        //printf("jb (dopo eventuale incremento) = %d\n",jb);
+        if ((jc<=jb) || (jc< nb_idxI)){
+            //printf("jc %d <= jb %d, continue\n ", jc, jb);
+            continue;
+        }
       if (marked[jb]==0){
-	itmp = marked[jc];
-	marked[jc] = marked[jb];
-	marked[jb] = itmp;
-	itmp = jpvt[jc];
-	jpvt[jc] = jpvt[jb];
-	jpvt[jb] = itmp;
-	dtmp = norms[jc];
-	norms[jc] = norms[jb];
-	norms[jb] = dtmp;
-	jblda = jb*lda;
-	jclda = jc*lda;
-	for (i=0;i<m;i++){
-	  dtmp = a[jclda];
-	  a[jclda] = a[jblda];
-	  a[jblda] = dtmp;
-	  jblda++;
-	  jclda++;
-	}
-	nscambi +=1;
-	jb+=1;
+         // printf("scambio jc, jb = %d, %d\nmarked = ", jb,jc);
+         // for(k=0;k<ncols;k++)
+         //     printf("%d \t",marked[k]);
+         // printf("\n");
+        itmp = marked[jc];
+        marked[jc] = marked[jb];
+        marked[jb] = itmp;
+        itmp = jpvt[jc];
+        jpvt[jc] = jpvt[jb];
+        jpvt[jb] = itmp;
+        dtmp = norms[jc];
+        norms[jc] = norms[jb];
+        norms[jb] = dtmp;
+        jblda = jb*lda;
+        jclda = jc*lda;
+        for (i=0;i<m;i++){
+          dtmp = a[jclda];
+          a[jclda] = a[jblda];
+          a[jblda] = dtmp;
+          jblda++;
+          jclda++;
+        }
+        nscambi +=1;
+        jb+=1;
       }
     }else if (marked[jc]==2){
       while((jt>=0) && (marked[jt]!=0) && (marked[jt]!=1))
-	jt-=1;
+        jt-=1;
       if ((jc>=jt) || (jc >= ncols-nz))
-	continue;
+        continue;
       if (marked[jt]==0){
-	itmp = marked[jc];
-	marked[jc] = marked[jt];
-	marked[jt] = itmp;
-	itmp = jpvt[jc];
-	jpvt[jc] = jpvt[jt];
-	jpvt[jt] = itmp;
-	dtmp = norms[jc];
-	norms[jc] = norms[jt];
-	norms[jt] = dtmp;
-	jclda = jc*lda;
-	jtlda = jt*lda;
-    	for (i=0;i<m;i++){
-	  dtmp = a[jclda];
-	  a[jclda] = a[jtlda];
-	  a[jtlda] = dtmp;
-	  jclda++;
-	  jtlda++;
-	}
-	nscambi +=1;
-	jt-=1;
+        itmp = marked[jc];
+        marked[jc] = marked[jt];
+        marked[jt] = itmp;
+        itmp = jpvt[jc];
+        jpvt[jc] = jpvt[jt];
+        jpvt[jt] = itmp;
+        dtmp = norms[jc];
+        norms[jc] = norms[jt];
+        norms[jt] = dtmp;
+        jclda = jc*lda;
+        jtlda = jt*lda;
+            for (i=0;i<m;i++){
+          dtmp = a[jclda];
+          a[jclda] = a[jtlda];
+          a[jtlda] = dtmp;
+          jclda++;
+          jtlda++;
+        }
+        nscambi +=1;
+        jt-=1;
       }	
     }
     
@@ -321,7 +261,22 @@ void permute_marked(int m, int n, int ncols,
   return;
 }
 
+void swapint(int *a,int*b){
+ int tmp;
+    tmp = *a;
+    *a = *b;
+    *b = tmp;
+    return;
+}
 
+void swapdouble(double * a,double * b){
+ double tmp;
+    tmp = *a;
+    *a = *b;
+    *b = tmp;
+    return;
+}
+    
 void DM_perm(int mfull, int nfull, int ncols, int rank,
 	     double* norms,
 	     double *a, int lda,
@@ -334,8 +289,8 @@ void DM_perm(int mfull, int nfull, int ncols, int rank,
 	     double *workdouble,
 	     wrapStruct *tmpStr){
   /*
-    This function computes a column ordering based on deviation maximization
-    input:
+    Deviation maximization block pivoting
+    with communication avoiding column pemutation
     m = rows
     n = columns
     norms = vector containing the norm of each column
@@ -365,7 +320,8 @@ void DM_perm(int mfull, int nfull, int ncols, int rank,
   //mark = auxiliary vector of size ncols
   // at the end mark[i]=1 iff the i-th column is selected by DM
   mark = workint;
-  // at the beginning it must be a zero valued vector, norm_update takes care of itInitialize auxiliary arrays 
+  // at the beginning it must be a zero valued vector, norm_update takes care of it
+  //  Initialize auxiliary arrays 
   if (0){/*This is done in norm_update for efficiency */
     for (i=0;i<ncols;i++){
       tmpStr[i].val = norms[i];
@@ -401,69 +357,63 @@ void DM_perm(int mfull, int nfull, int ncols, int rank,
   mark[tmpStr[0].idx] = 1;
   // Initialize ordered list of indices
   idxtmp[0] = 0;
-  i = 1;
   
   
   if (nc>1){
-    /* Rescale candidate columns by the inverse of the norm*/
-    
-    for(j=0;j<nc;j++){
-      cc = 1.0/tmpStr[j].val;
-      idxj = tmpStr[j].idx; 
-      startpos1 = j*m;
-      startpos2 = idxj*lda+rank;
-      for(i=0;i<m;i++) {
-	as[startpos1+i] = cc*a[startpos2+i];
-      }
-    }
+        /* Rescale candidate columns by the inverse of the norm*/
 
-    /* Compute the cosine matrix matrix cosmat = as.T*as */
-    if (1){
-      cblas_dgemm(CblasColMajor, CblasTrans, CblasNoTrans,
-		  nc, nc, m, one, as, m, as, m,
-		  zero, cosmat, nc);
-      
-      
-    }
-    else{
-      /* Does not work as expected */
-      cblas_dsyrk(CblasColMajor, CblasUpper, CblasTrans,
-		  nc, m,
-		  one, as, m,
-		  zero, cosmat, nc);
-    }
+        for(j=0;j<nc;j++){
+          cc = 1.0/tmpStr[j].val;
+          idxj = tmpStr[j].idx; 
+          startpos1 = j*m;
+          startpos2 = idxj*lda+rank;
+          for(i=0;i<m;i++) {
+                as[startpos1+i] = cc*a[startpos2+i];
+          }
+        }
 
+        /* Compute the cosine matrix matrix cosmat = as.T*as */
+        cblas_dsyrk(CblasColMajor, CblasUpper, CblasTrans,
+              nc, m,
+              one, as, m,
+              zero, cosmat, nc);
+        
+
+        i=1;
+        while(i<nc){
+          // Compute the maximum value of the cosine of the angle between candidate and previously selected columns
+            if (mark[tmpStr[i].idx] == 0){
+                maxval = 0.0; 
+                for(j=0;j<*nb_idxI;j++){
+                  if(maxval < fabs(cosmat[i*nc+idxtmp[j]]))
+                    maxval = fabs(cosmat[i*nc+idxtmp[j]]); 
+            }
+            //printf("max %f\t",maxval);
+            if ((maxval < delta) && (*nb_idxI < k_max)){ // if the cosine in small enough -> angle large enough
+              // then add i to selected columns
+              idxtmp[sel] = i;
+              idxI[sel] = tmpStr[i].idx;
+
+              mark[tmpStr[i].idx] = 1;
+              sel++;
+              nb_idxI[0] +=1;
+            }
+              }
+              i++;
+            }
+          }
     
-    while(i<nc){
-      // Compute the maximum value of the cosine of the angle between candidate and previously selected columns
-      if (mark[tmpStr[i].idx] == 0){
-	maxval = 0.0; 
-	for(j=0;j<*nb_idxI;j++){
-	  if(maxval < fabs(cosmat[i*nc+idxtmp[j]]))
-	    maxval = fabs(cosmat[i*nc+idxtmp[j]]); 
-	}
-	if ((maxval < delta) && (*nb_idxI < k_max)){ // if the cosine in small enough -> angle large enough
-	// then add i to selected columns
-	  idxtmp[sel] = i;
-	  idxI[sel] = tmpStr[i].idx;
-	  
-	  mark[tmpStr[i].idx] = 1;
-	  sel++;
-	  nb_idxI[0] +=1;
-	}
-      }
-      i++;
-    }
-  }
-  
-  /* Permute selected columns at top left positions*/
-  permute_marked(mfull, nfull, ncols,
-		 &a[1], lda,
-		 jpvt, norms,
-		 mark,
-		 idxI, *nb_idxI,
-		 0);
-  
+
+   /* Permute selected columns at top left positions
+   Selected columns already in leading positions are not moved
+   */ 
+   permute_marked(mfull, nfull, ncols,
+                 &a[1], lda,
+                 jpvt, norms,
+                 mark,
+                 idxI, *nb_idxI,
+                 0);
+
   return;
 }
 
@@ -520,11 +470,12 @@ int dgeqrdm_work(int matrix_layout,
   /*          On exit, NCOLS[I] returns the number of factorized columns  */
   /*          at i-th iteration.  */
 
-  /*  THRES   (input) DOUBLE PRECISION array, dimension (2) */
+  /*  THRES   (input) DOUBLE PRECISION array, dimension (3) */
   /*          Deviation Maximization parameters:   */
   /*          THRES[0] contains the value of 0=<delta<=1*/
   /*          THRES[1] contains the value of 0=<tau_<=1*/
-
+  /*          THRES[2] (OPTIANAL) contains the value of eta>0*/
+   
   /*  NB      (input) INT */
   /*          Blocksize. Maximum numer of candidate columns (lated denoted as K_MAX). */
 
@@ -557,17 +508,16 @@ int dgeqrdm_work(int matrix_layout,
   /*  ===================================================================== */
 
   /*  Local variables */
+  double delta,  tau_, eta;
+    
   int flag_exit1=0;
   int enable_stop =0;
-  if (ncols[0] == 1){
-    enable_stop=1;
-  }
-
-  double delta,  tau_;
   delta = thres[0];
   tau_ = thres[1];
-  int threschoice = 1; /* 1: Triagularize a column if it is still a candidate, 0: Traingularize if its partial norm is larger than 1e-14*/ 
-  double maxnrm = 0.0, maxnrmA = 0.0;
+  int threschoice = 1; 
+    /* 1: Triagularize a column if it is still a candidate, 
+    0: Traingularize if its partial norm is larger than 1e-14 */ 
+  double maxnrm = 0.0;
   int ii, jj;
   int a_dim1, a_offset, i__1, i__2, i__3;
 
@@ -578,7 +528,19 @@ int dgeqrdm_work(int matrix_layout,
   double eps = LAPACKE_dlamch('e');
   double tol3z = sqrt(eps);
   
-
+  if (ncols[0] == 1){
+      /*stopping criterion: ||R_{22}||< eps*n*||A||*/
+      enable_stop=1;
+      eta = eps*n;
+  }else if (ncols[0] == 2){
+       /*stopping criterion: ||R_{22}||< eps*sqrt(n)*||A||*/
+    enable_stop=2;
+    eta = eps*sqrt(n);
+  }else if (ncols[0] == 3){
+       /*stopping criterion: ||R_{22}||< eta*||A||*/
+    enable_stop=3;
+    eta = thres[2];
+  }
 
   /* Parameter adjustments */
   /* Convert 0-based arrays into 1-based */
@@ -690,7 +652,9 @@ int dgeqrdm_work(int matrix_layout,
     --work;
   
     int * workint;
-    workint = (int*) malloc((2*n+nb)*sizeof(int));
+    workint = (int*) malloc((3*n+nb)*sizeof(int));
+    int * ploc;
+    ploc = &workint[2*n+nb];
     int nc_x_block; 
     int ncmax = nb, k_max = nb;
     int it = -1;
@@ -714,9 +678,11 @@ int dgeqrdm_work(int matrix_layout,
       tmpStr[j-1].val = work[j];
       tmpStr[j-1].idx = j-1;
       workint[n+j-1] = 0;
+      ploc[j-1] = j-1;
     }
-    maxnrmA =maxnrm; // for the termination criterion
-
+    // for the termination criterion
+    eta = eta*maxnrm;
+        
     // initialize indices
     j = nfxd + 1;      // 1-base column index
     i__1 = m - j + 1; // rows left to process
@@ -733,11 +699,12 @@ int dgeqrdm_work(int matrix_layout,
 
 	
       /* Deviation maximization with pivoting */
-      if (maxnrm<=5*eps)
-	k_max = 1; // if the partial column norms are too small, then switch to standard pivoting
-      else
-	k_max = min(min(nb,i__1),i__3);
+      // k_max is limited to the number of columns left to process
+      k_max = min(min(nb,i__1),i__3);
 	
+     //printf("k_max %d, tau_ %f, delta %f \n", k_max, tau_, delta);   
+     if (1){
+         /*communication avoiding DM pivoting*/
       DM_perm(m, n, i__3, j,
 	      &work[j],
 	      &a[j * a_dim1], a_dim1,
@@ -749,6 +716,19 @@ int dgeqrdm_work(int matrix_layout,
 	      &fjb, 
 	      &workint[n], workdouble, tmpStr);
 		
+     }else{
+      /*DM pivoting*/
+      DM_perm2(m, n, i__3, j,
+	      &work[j],
+	      &a[j * a_dim1], a_dim1,
+	      &jpvt[j],
+	      tau_,
+	      delta,
+	      k_max,
+	      workint,
+	      &fjb, 
+	      &workint[n], workdouble, tmpStr, &ploc[j-1]);
+     }
       /* Compute Householder reflectors */
       /* H(j), H(j+1), . . ., H(j+fjb-1) */
       fjb_cmp = fjb;       	
@@ -757,7 +737,8 @@ int dgeqrdm_work(int matrix_layout,
 			&tau[j], &workdouble[m*ncmax + ncmax*ncmax],
 			threschoice, &tau_, &fjb_cmp );
       
-      ncols[it] = fjb_cmp;  // number of columns reduced to triangular form
+      ncols[it] = fjb_cmp;  // number of columns actually reduced to triangular form
+     //printf("j = %d, fjb = %d, fjb_cmq %d \n", j, fjb,fjb_cmp);
 	
       if (info !=0){
 	printf("LAPACK dgeqr2 failed, info =%d \n", info);
@@ -778,7 +759,7 @@ int dgeqrdm_work(int matrix_layout,
       
       /* Apply H**T to A(j:m,j+fjb_cmp:n) from the left */
  
-      info =  LAPACKE_dlarfb_mia(matrix_layout,
+   info =  LAPACKE_dlarfb_mia(matrix_layout,
 				 'l', 't', 'f',
 				 'c', i__1, i__3-fjb,
 				 fjb_cmp,  &a[j * a_dim1 + j], lda,
@@ -793,21 +774,19 @@ int dgeqrdm_work(int matrix_layout,
       norm_update(i__1-fjb_cmp, i__3-fjb_cmp, fjb_cmp,
 		  &a[(j+fjb_cmp)*lda+j], lda,
 		  &work[j+fjb_cmp], &work[n+j+fjb_cmp], &maxnrm,
-		  tmpStr, &workint[n],
+		  tmpStr, &workint[n], &ploc[(j-1)+fjb_cmp],
 		  tol3z);
 	
       j += fjb_cmp;
       /* Stop criterion */
-      if (enable_stop == 1){
-	if ((maxnrm*sqrt((i__3-fjb_cmp)) <= eps*maxnrmA*(n)))
-	  goto exit_level_0;
+      if (enable_stop >= 1){
+        if ((maxnrm*sqrt((i__3-fjb_cmp)) <= eta))
+          goto exit_level_0;
       }
-	
 	
     }
 
     
-  
     /* Use unblocked code to factor the last or only block. */
     /* NOT used here!!!!!!!!! */ 
     i__1 = n - j + 1;
@@ -836,10 +815,15 @@ int dgeqrdm_work(int matrix_layout,
     
   exit_level_0:
     free(tmpStr);
+    //printf("free(tmpStr) ok\n");
+    //printf("%d %d %d \n", workint[0],workint[1],workint[2]); 
     free(workint);
+    //printf("free(workint) ok\n");
     free(workdouble);
+    //printf("free(workdouble) ok\n");
     work++;
     free(work);
+    //printf("free(work) ok\n");
     if (info !=0){
       return info;
     }
