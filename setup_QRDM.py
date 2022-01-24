@@ -13,7 +13,6 @@ import numpy.distutils.misc_util
 static_libraries = ['blas','lapacke','lapack']
 static_lib_dir = '/usr/lib'
 libraries = ['z', 'xml2', 'gmp']
-#library_dirs = ['/system/lib', '/system/lib64']
 
 extra_objects = ['{}/lib{}.a'.format(static_lib_dir, l) for l in static_libraries]
 
@@ -35,17 +34,12 @@ extension_mod = Extension(name = "QRDM",
 			      numpy.get_include(),
 			      numpy.distutils.misc_util.get_numpy_include_dirs()
 			  ],
-			  #define_macros = [
-			  #	("RUNNING_ON_PC", None)
-			  #],
 			  language = "c",
-                          libraries=static_libraries,
-                          #library_dirs=library_dirs,
-                          #extra_objects=extra_objects
-                        )
+              libraries=static_libraries
+              )
 
 setup(name="QRDM", 
-      version = '1.1',
+      version = '0.2',
       author = 'M. Dessole and F. Marcuzzi',
       description = "Execute QRDM algorithm in a Python notebook",
       ext_modules=[extension_mod],

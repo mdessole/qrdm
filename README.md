@@ -11,6 +11,10 @@ Compile Python module with
 python build_QRDM.py
 ```
 
+Please, specify:
+- setup_QRDM.py, line 14: installation path for BLAS, LAPACK and LAPACKE
+- QRDM_wrapper.c, line 1: header file "Python.h"
+
 ## Dependencies
 
 - Python 3
